@@ -14,6 +14,21 @@ export async function createProject(formData: FormData) {
     redirect("/login");
   }
 
+  const { data: freelancer } = await supabase
+    .from("freelancers")
+    .select("subscription_status")
+    .eq("id", user.id)
+    .single();
+
+  const { count } = await supabase
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .neq("stage", "Complete");
+
+  if (freelancer?.subscription_status !== "active" && (count ?? 0) >= 1) {
+    redirect("/dashboard/upgrade");
+  }
+
   const clientName = formData.get("client_name") as string;
   const clientEmail = formData.get("client_email") as string;
 
