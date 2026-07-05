@@ -77,7 +77,14 @@ export async function respondToReview(formData: FormData) {
 
   const nextStage = decision === "approve" ? "Complete" : "Revisions";
 
-  const { error } = await service.from("projects").update({ stage: nextStage }).eq("id", projectId);
+  const { error } = await service
+    .from("projects")
+    .update({
+      stage: nextStage,
+      stage_updated_at: new Date().toISOString(),
+      last_reminder_sent_at: null,
+    })
+    .eq("id", projectId);
 
   if (error) {
     redirect(`/portal/${token}?error=${encodeURIComponent(error.message)}`);

@@ -51,7 +51,10 @@ export async function updateStage(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("projects").update({ stage }).eq("id", projectId);
+  const { error } = await supabase
+    .from("projects")
+    .update({ stage, stage_updated_at: new Date().toISOString(), last_reminder_sent_at: null })
+    .eq("id", projectId);
 
   if (error) {
     redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
