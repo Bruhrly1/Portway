@@ -4,6 +4,8 @@ import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
 
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
+
 async function getProjectIdForToken(token: string) {
   const service = createServiceClient();
   const { data } = await service
@@ -32,8 +34,12 @@ export async function uploadClientFile(formData: FormData) {
     redirect(`/portal/${token}?error=${encodeURIComponent("Choose a file first")}`);
   }
 
+  if (file.size > MAX_FILE_BYTES) {
+    redirect(`/portal/${token}?error=${encodeURIComponent("File is too large (20MB max)")}`);
+  }
+
   const service = createServiceClient();
-  const path = `${projectId}/${randomBytes(8).toString("hex")}-${file.name}`;
+  const path = `${projectId}/${randomBytes(16).toString("hex")}`;
 
   const { error: uploadError } = await service.storage.from("project-files").upload(path, file);
 

@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
+const MAX_LOGO_BYTES = 5 * 1024 * 1024;
+
 export async function updateBranding(formData: FormData) {
   const businessName = formData.get("business_name") as string;
   const accentColor = formData.get("accent_color") as string;
@@ -46,8 +48,12 @@ export async function uploadLogo(formData: FormData) {
     redirect(`/dashboard/settings?error=${encodeURIComponent("Choose an image first")}`);
   }
 
+  if (file.size > MAX_LOGO_BYTES) {
+    redirect(`/dashboard/settings?error=${encodeURIComponent("Image is too large (5MB max)")}`);
+  }
+
   const service = createServiceClient();
-  const path = `${user.id}/${randomBytes(8).toString("hex")}-${file.name}`;
+  const path = `${user.id}/${randomBytes(16).toString("hex")}`;
 
   const { error: uploadError } = await service.storage.from("brand-assets").upload(path, file);
 

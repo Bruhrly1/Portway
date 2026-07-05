@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 const TOKEN_TTL_DAYS = 365;
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
 
 async function assertOwnsProject(projectId: string) {
   const supabase = await createClient();
@@ -73,8 +74,12 @@ export async function uploadFreelancerFile(formData: FormData) {
     redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent("Choose a file first")}`);
   }
 
+  if (file.size > MAX_FILE_BYTES) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent("File is too large (20MB max)")}`);
+  }
+
   const service = createServiceClient();
-  const path = `${projectId}/${randomBytes(8).toString("hex")}-${file.name}`;
+  const path = `${projectId}/${randomBytes(16).toString("hex")}`;
 
   const { error: uploadError } = await service.storage
     .from("project-files")
