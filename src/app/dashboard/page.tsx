@@ -33,9 +33,14 @@ export default async function DashboardPage() {
             <h1 className="text-xl font-semibold text-zinc-900">Dashboard</h1>
             <p className="mt-1 text-sm text-zinc-500">Signed in as {user?.email}</p>
           </div>
-          <form action={signOut}>
-            <button className="text-sm text-zinc-500 hover:text-zinc-900">Sign out</button>
-          </form>
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard/settings" className="text-sm text-zinc-500 hover:text-zinc-900">
+              Branding
+            </Link>
+            <form action={signOut}>
+              <button className="text-sm text-zinc-500 hover:text-zinc-900">Sign out</button>
+            </form>
+          </div>
         </div>
 
         <div className="mt-8 flex items-center justify-between">

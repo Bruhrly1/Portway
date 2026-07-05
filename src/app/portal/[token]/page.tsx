@@ -30,6 +30,7 @@ export default async function ClientPortalPage({
     stage: string;
     business_name: string | null;
     accent_color: string | null;
+    logo_url: string | null;
   };
 
   const accent = project.accent_color ?? "#18181b";
@@ -55,7 +56,17 @@ export default async function ClientPortalPage({
     <div className="min-h-screen bg-zinc-50">
       <div className="h-1.5 w-full" style={{ backgroundColor: accent }} />
       <div className="mx-auto max-w-2xl p-8">
-        <p className="text-sm text-zinc-500">{project.business_name ?? "Your freelancer"}</p>
+        <div className="flex items-center gap-3">
+          {project.logo_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={project.logo_url}
+              alt={project.business_name ?? "Logo"}
+              className="h-10 w-10 rounded-md border border-zinc-200 object-contain"
+            />
+          )}
+          <p className="text-sm text-zinc-500">{project.business_name ?? "Your freelancer"}</p>
+        </div>
         <h1 className="mt-1 text-2xl font-semibold text-zinc-900">{project.client_name}</h1>
 
         {queryError && (
