@@ -53,16 +53,21 @@ export default async function DashboardPage() {
         ) : (
           <ul className="mt-4 divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white">
             {sorted.map((project) => (
-              <li key={project.id} className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-zinc-900">{project.client_name}</p>
-                  <p className="text-xs text-zinc-500">{project.client_email}</p>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${STAGE_STYLES[project.stage] ?? "bg-zinc-100 text-zinc-700"}`}
+              <li key={project.id}>
+                <Link
+                  href={`/dashboard/projects/${project.id}`}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50"
                 >
-                  {project.stage}
-                </span>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-900">{project.client_name}</p>
+                    <p className="text-xs text-zinc-500">{project.client_email}</p>
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${STAGE_STYLES[project.stage] ?? "bg-zinc-100 text-zinc-700"}`}
+                  >
+                    {project.stage}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
