@@ -12,14 +12,19 @@ const STAGE_STYLES: Record<string, string> = {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("id, client_name, client_email, stage, created_at")
-    .order("created_at", { ascending: true });
+  const [
+    {
+      data: { user },
+    },
+    { data: projects },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("projects")
+      .select("id, client_name, client_email, stage, created_at")
+      .order("created_at", { ascending: true }),
+  ]);
 
   const active = (projects ?? []).filter((p) => p.stage !== "Complete");
   const complete = (projects ?? []).filter((p) => p.stage === "Complete");
