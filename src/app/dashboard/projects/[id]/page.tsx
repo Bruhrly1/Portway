@@ -17,34 +17,30 @@ export default async function ProjectDetailPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, client_name, client_email, stage")
-    .eq("id", id)
-    .single();
+  const [{ data: project }, { data: tokens }, { data: files }] = await Promise.all([
+    supabase.from("projects").select("id, client_name, client_email, stage").eq("id", id).single(),
+    supabase
+      .from("client_access_tokens")
+      .select("token, expires_at")
+      .eq("project_id", id)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("project_files")
+      .select("id, filename, uploaded_by, file_path, created_at")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false }),
+  ]);
 
   if (!project) {
     notFound();
   }
 
-  const { data: tokens } = await supabase
-    .from("client_access_tokens")
-    .select("token, expires_at")
-    .eq("project_id", id)
-    .gt("expires_at", new Date().toISOString())
-    .order("created_at", { ascending: false })
-    .limit(1);
-
   const activeToken = tokens?.[0];
   const host = (await headers()).get("host");
   const protocol = host?.startsWith("localhost") ? "http" : "https";
   const portalUrl = activeToken ? `${protocol}://${host}/portal/${activeToken.token}` : null;
-
-  const { data: files } = await supabase
-    .from("project_files")
-    .select("id, filename, uploaded_by, file_path, created_at")
-    .eq("project_id", id)
-    .order("created_at", { ascending: false });
 
   const service = createServiceClient();
   const filesWithUrls = await Promise.all(
