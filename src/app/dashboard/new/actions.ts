@@ -2,28 +2,21 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function createProject(formData: FormData) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  const { data: freelancer } = await supabase
-    .from("freelancers")
-    .select("subscription_status")
-    .eq("id", user.id)
-    .single();
+  const supabase = await createClient();
 
-  const { count } = await supabase
-    .from("projects")
-    .select("id", { count: "exact", head: true })
-    .neq("stage", "Complete");
+  const [{ data: freelancer }, { count }] = await Promise.all([
+    supabase.from("freelancers").select("subscription_status").eq("id", user.id).single(),
+    supabase.from("projects").select("id", { count: "exact", head: true }).neq("stage", "Complete"),
+  ]);
 
   if (freelancer?.subscription_status !== "active" && (count ?? 0) >= 1) {
     redirect("/dashboard/upgrade");

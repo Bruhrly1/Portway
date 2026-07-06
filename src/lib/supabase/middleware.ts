@@ -39,5 +39,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  // Forward the already-validated identity via request headers so pages
+  // and server actions don't need to call getUser() again themselves.
+  // Always overwrite (never merge) so a client can't spoof these by
+  // sending its own x-user-id header - this is the only place they're set,
+  // and only after getUser() has actually verified the session.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-user-id", user.id);
+  requestHeaders.set("x-user-email", user.email ?? "");
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+
+  return response;
 }

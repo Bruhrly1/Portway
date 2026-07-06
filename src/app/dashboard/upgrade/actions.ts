@@ -2,18 +2,17 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
 
 export async function startCheckout() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
 
+  const supabase = await createClient();
   const { data: freelancer } = await supabase
     .from("freelancers")
     .select("stripe_customer_id")
@@ -24,7 +23,7 @@ export async function startCheckout() {
     mode: "subscription",
     line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
     customer: freelancer?.stripe_customer_id ?? undefined,
-    customer_email: freelancer?.stripe_customer_id ? undefined : user.email,
+    customer_email: freelancer?.stripe_customer_id ? undefined : user.email || undefined,
     client_reference_id: user.id,
     success_url: `${process.env.SITE_URL}/dashboard?upgraded=1`,
     cancel_url: `${process.env.SITE_URL}/dashboard/upgrade`,
@@ -34,14 +33,13 @@ export async function startCheckout() {
 }
 
 export async function openBillingPortal() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
+
+  const supabase = await createClient();
 
   const { data: freelancer } = await supabase
     .from("freelancers")

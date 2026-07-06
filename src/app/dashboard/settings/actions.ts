@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 
@@ -11,14 +12,13 @@ export async function updateBranding(formData: FormData) {
   const businessName = formData.get("business_name") as string;
   const accentColor = formData.get("accent_color") as string;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
+
+  const supabase = await createClient();
 
   const { error } = await supabase
     .from("freelancers")
@@ -35,14 +35,13 @@ export async function updateBranding(formData: FormData) {
 export async function uploadLogo(formData: FormData) {
   const file = formData.get("logo") as File;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     redirect("/login");
   }
+
+  const supabase = await createClient();
 
   if (!file || file.size === 0) {
     redirect(`/dashboard/settings?error=${encodeURIComponent("Choose an image first")}`);

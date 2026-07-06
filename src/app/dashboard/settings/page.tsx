@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { updateBranding, uploadLogo } from "./actions";
 import { openBillingPortal } from "../upgrade/actions";
 
@@ -10,9 +11,7 @@ export default async function SettingsPage({
 }) {
   const { error } = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUser();
 
   const { data: freelancer } = await supabase
     .from("freelancers")
