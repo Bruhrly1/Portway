@@ -138,7 +138,12 @@ export default async function ProjectDetailPage({
           )}
           <form action={uploadFreelancerFile} className="mt-4 flex items-center gap-3">
             <input type="hidden" name="project_id" value={project.id} />
-            <input type="file" name="file" required className="text-sm" />
+            <input
+              type="file"
+              name="file"
+              required
+              className="text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800"
+            />
             <button
               type="submit"
               className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800"

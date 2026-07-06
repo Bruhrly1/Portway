@@ -145,7 +145,13 @@ export default async function ClientPortalPage({
           )}
           <form action={uploadClientFile} className="mt-4 flex items-center gap-3">
             <input type="hidden" name="token" value={token} />
-            <input type="file" name="file" required className="text-sm" />
+            <input
+              type="file"
+              name="file"
+              required
+              className="text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-[var(--file-accent)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:opacity-90"
+              style={{ "--file-accent": accent } as React.CSSProperties}
+            />
             <button
               type="submit"
               className="rounded-md px-3 py-2 text-sm font-medium text-white hover:opacity-90"
