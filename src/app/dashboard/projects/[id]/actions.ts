@@ -102,3 +102,33 @@ export async function uploadFreelancerFile(formData: FormData) {
 
   redirect(`/dashboard/projects/${projectId}`);
 }
+
+export async function deleteFile(formData: FormData) {
+  const projectId = formData.get("project_id") as string;
+  const fileId = formData.get("file_id") as string;
+
+  await assertOwnsProject(projectId);
+
+  const service = createServiceClient();
+
+  const { data: file } = await service
+    .from("project_files")
+    .select("file_path")
+    .eq("id", fileId)
+    .eq("project_id", projectId)
+    .single();
+
+  if (!file) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent("File not found")}`);
+  }
+
+  await service.storage.from("project-files").remove([file.file_path]);
+
+  const { error } = await service.from("project_files").delete().eq("id", fileId);
+
+  if (error) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/dashboard/projects/${projectId}`);
+}

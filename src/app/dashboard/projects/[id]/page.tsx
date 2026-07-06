@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { generateClientLink, updateStage, uploadFreelancerFile } from "./actions";
+import { deleteFile, generateClientLink, updateStage, uploadFreelancerFile } from "./actions";
 
 const STAGES = ["Kickoff", "In Progress", "Review", "Revisions", "Complete"];
 
@@ -129,9 +129,21 @@ export default async function ProjectDetailPage({
                   ) : (
                     <span>{file.filename}</span>
                   )}
-                  <span className="text-xs text-zinc-400">
-                    {file.uploaded_by === "client" ? "from client" : "you"}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-zinc-400">
+                      {file.uploaded_by === "client" ? "from client" : "you"}
+                    </span>
+                    <form action={deleteFile}>
+                      <input type="hidden" name="project_id" value={project.id} />
+                      <input type="hidden" name="file_id" value={file.id} />
+                      <button
+                        type="submit"
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    </form>
+                  </div>
                 </li>
               ))}
             </ul>

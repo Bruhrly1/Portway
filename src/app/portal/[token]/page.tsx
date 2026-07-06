@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { respondToReview, uploadClientFile } from "./actions";
+import { deleteClientFile, respondToReview, uploadClientFile } from "./actions";
 
 const STAGES = ["Kickoff", "In Progress", "Review", "Revisions", "Complete"];
 
@@ -136,9 +136,23 @@ export default async function ClientPortalPage({
                   ) : (
                     <span>{file.filename}</span>
                   )}
-                  <span className="text-xs text-zinc-400">
-                    {file.uploaded_by === "client" ? "you" : "from freelancer"}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-zinc-400">
+                      {file.uploaded_by === "client" ? "you" : "from freelancer"}
+                    </span>
+                    {file.uploaded_by === "client" && (
+                      <form action={deleteClientFile}>
+                        <input type="hidden" name="token" value={token} />
+                        <input type="hidden" name="file_id" value={file.id} />
+                        <button
+                          type="submit"
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

@@ -61,6 +61,41 @@ export async function uploadClientFile(formData: FormData) {
   redirect(`/portal/${token}`);
 }
 
+export async function deleteClientFile(formData: FormData) {
+  const token = formData.get("token") as string;
+  const fileId = formData.get("file_id") as string;
+
+  const projectId = await getProjectIdForToken(token);
+  if (!projectId) {
+    redirect(`/portal/${token}?error=${encodeURIComponent("This link is no longer valid")}`);
+  }
+
+  const service = createServiceClient();
+
+  const { data: file } = await service
+    .from("project_files")
+    .select("file_path, uploaded_by")
+    .eq("id", fileId)
+    .eq("project_id", projectId)
+    .single();
+
+  // Clients can only remove files they uploaded themselves, never files
+  // the freelancer sent them.
+  if (!file || file.uploaded_by !== "client") {
+    redirect(`/portal/${token}?error=${encodeURIComponent("File not found")}`);
+  }
+
+  await service.storage.from("project-files").remove([file.file_path]);
+
+  const { error } = await service.from("project_files").delete().eq("id", fileId);
+
+  if (error) {
+    redirect(`/portal/${token}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/portal/${token}`);
+}
+
 export async function respondToReview(formData: FormData) {
   const token = formData.get("token") as string;
   const decision = formData.get("decision") as string;
