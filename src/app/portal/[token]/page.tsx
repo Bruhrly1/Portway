@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { getReadableTextColor } from "@/lib/color";
 import { formatFileSize, formatTimestamp, isImageFilename } from "@/lib/format";
 import { STAGES } from "@/lib/stages";
-import { deleteClientFile, respondToReview, uploadClientFile } from "./actions";
+import { deleteClientFile, respondToReview, uploadClientFile, uploadForFileRequest } from "./actions";
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
   Kickoff: "We're getting your project set up and will begin work shortly.",
@@ -52,15 +52,21 @@ export default async function ClientPortalPage({
   const currentStageIndex = STAGES.indexOf(project.stage);
 
   const service = createServiceClient();
-  const [{ data: files }, { data: projectRow }, { data: storageObjects }] = await Promise.all([
-    service
-      .from("project_files")
-      .select("id, filename, uploaded_by, file_path, created_at")
-      .eq("project_id", project.project_id)
-      .order("created_at", { ascending: false }),
-    service.from("projects").select("freelancers(email)").eq("id", project.project_id).single(),
-    service.storage.from("project-files").list(project.project_id, { limit: 1000 }),
-  ]);
+  const [{ data: files }, { data: projectRow }, { data: storageObjects }, { data: fileRequests }] =
+    await Promise.all([
+      service
+        .from("project_files")
+        .select("id, filename, uploaded_by, file_path, created_at, file_request_id")
+        .eq("project_id", project.project_id)
+        .order("created_at", { ascending: false }),
+      service.from("projects").select("freelancers(email)").eq("id", project.project_id).single(),
+      service.storage.from("project-files").list(project.project_id, { limit: 1000 }),
+      service
+        .from("file_requests")
+        .select("id, label, status")
+        .eq("project_id", project.project_id)
+        .order("created_at", { ascending: true }),
+    ]);
 
   const freelancersData = projectRow?.freelancers as { email: string } | { email: string }[] | null | undefined;
   const freelancerEmail = (Array.isArray(freelancersData) ? freelancersData[0] : freelancersData)?.email ?? null;
@@ -84,6 +90,10 @@ export default async function ClientPortalPage({
       size: sizeByObjectName.get(objectName) ?? null,
     };
   });
+
+  const fileByRequestId = new Map(
+    filesWithUrls.filter((f) => f.file_request_id).map((f) => [f.file_request_id, f]),
+  );
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -185,6 +195,68 @@ export default async function ClientPortalPage({
             </div>
           )}
         </div>
+
+        {fileRequests && fileRequests.length > 0 && (
+          <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
+            <h2 className="text-sm font-medium text-zinc-700">What we need from you</h2>
+            <ul className="mt-3 divide-y divide-zinc-100">
+              {fileRequests.map((request) => {
+                const fulfilledBy = fileByRequestId.get(request.id);
+                return (
+                  <li key={request.id} className="py-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium text-zinc-900">{request.label}</span>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                          request.status === "received"
+                            ? "bg-green-50 text-green-700"
+                            : "bg-zinc-100 text-zinc-600"
+                        }`}
+                      >
+                        {request.status === "received" ? "Received" : "Pending"}
+                      </span>
+                    </div>
+                    {request.status === "received" && fulfilledBy ? (
+                      <p className="mt-1 text-xs text-zinc-400">
+                        {fulfilledBy.signedUrl ? (
+                          <a href={fulfilledBy.signedUrl} className="underline hover:no-underline">
+                            {fulfilledBy.filename}
+                          </a>
+                        ) : (
+                          fulfilledBy.filename
+                        )}
+                      </p>
+                    ) : (
+                      <form action={uploadForFileRequest} className="mt-2 flex items-center gap-3">
+                        <input type="hidden" name="token" value={token} />
+                        <input type="hidden" name="request_id" value={request.id} />
+                        <input
+                          type="file"
+                          name="file"
+                          required
+                          className="text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-[var(--file-accent)] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[var(--file-text)] file:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.15)] hover:file:opacity-90"
+                          style={
+                            {
+                              "--file-accent": accent,
+                              "--file-text": accentText,
+                            } as React.CSSProperties
+                          }
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-md px-3 py-1.5 text-xs font-medium hover:opacity-90"
+                          style={accentButtonStyle}
+                        >
+                          Upload
+                        </button>
+                      </form>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
           <h2 className="text-sm font-medium text-zinc-700">Files</h2>

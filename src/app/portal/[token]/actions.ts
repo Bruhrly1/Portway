@@ -61,6 +61,62 @@ export async function uploadClientFile(formData: FormData) {
   redirect(`/portal/${token}`);
 }
 
+export async function uploadForFileRequest(formData: FormData) {
+  const token = formData.get("token") as string;
+  const requestId = formData.get("request_id") as string;
+  const file = formData.get("file") as File;
+
+  const projectId = await getProjectIdForToken(token);
+  if (!projectId) {
+    redirect(`/portal/${token}?error=${encodeURIComponent("This link is no longer valid")}`);
+  }
+
+  if (!file || file.size === 0) {
+    redirect(`/portal/${token}?error=${encodeURIComponent("Choose a file first")}`);
+  }
+
+  if (file.size > MAX_FILE_BYTES) {
+    redirect(`/portal/${token}?error=${encodeURIComponent("File is too large (20MB max)")}`);
+  }
+
+  const service = createServiceClient();
+
+  const { data: request } = await service
+    .from("file_requests")
+    .select("id")
+    .eq("id", requestId)
+    .eq("project_id", projectId)
+    .single();
+
+  if (!request) {
+    redirect(`/portal/${token}?error=${encodeURIComponent("File request not found")}`);
+  }
+
+  const path = `${projectId}/${randomBytes(16).toString("hex")}`;
+
+  const { error: uploadError } = await service.storage.from("project-files").upload(path, file);
+
+  if (uploadError) {
+    redirect(`/portal/${token}?error=${encodeURIComponent(uploadError.message)}`);
+  }
+
+  const { error: insertError } = await service.from("project_files").insert({
+    project_id: projectId,
+    uploaded_by: "client",
+    file_path: path,
+    filename: file.name,
+    file_request_id: requestId,
+  });
+
+  if (insertError) {
+    redirect(`/portal/${token}?error=${encodeURIComponent(insertError.message)}`);
+  }
+
+  await service.from("file_requests").update({ status: "received" }).eq("id", requestId);
+
+  redirect(`/portal/${token}`);
+}
+
 export async function deleteClientFile(formData: FormData) {
   const token = formData.get("token") as string;
   const fileId = formData.get("file_id") as string;
@@ -74,7 +130,7 @@ export async function deleteClientFile(formData: FormData) {
 
   const { data: file } = await service
     .from("project_files")
-    .select("file_path, uploaded_by")
+    .select("file_path, uploaded_by, file_request_id")
     .eq("id", fileId)
     .eq("project_id", projectId)
     .single();
@@ -91,6 +147,10 @@ export async function deleteClientFile(formData: FormData) {
 
   if (error) {
     redirect(`/portal/${token}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (file.file_request_id) {
+    await service.from("file_requests").update({ status: "pending" }).eq("id", file.file_request_id);
   }
 
   redirect(`/portal/${token}`);

@@ -4,7 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { STAGES } from "@/lib/stages";
 import { CopyLinkButton } from "./CopyLinkButton";
-import { deleteFile, generateClientLink, updateNotes, updateStage, uploadFreelancerFile } from "./actions";
+import {
+  createFileRequest,
+  deleteFile,
+  deleteFileRequest,
+  generateClientLink,
+  updateNotes,
+  updateStage,
+  uploadFreelancerFile,
+} from "./actions";
 
 export default async function ProjectDetailPage({
   params,
@@ -17,7 +25,7 @@ export default async function ProjectDetailPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: project }, { data: tokens }, { data: files }] = await Promise.all([
+  const [{ data: project }, { data: tokens }, { data: files }, { data: fileRequests }] = await Promise.all([
     supabase
       .from("projects")
       .select("id, client_name, client_email, stage, notes")
@@ -35,6 +43,11 @@ export default async function ProjectDetailPage({
       .select("id, filename, uploaded_by, file_path, created_at")
       .eq("project_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("file_requests")
+      .select("id, label, status")
+      .eq("project_id", id)
+      .order("created_at", { ascending: true }),
   ]);
 
   if (!project) {
@@ -135,6 +148,56 @@ export default async function ProjectDetailPage({
               className="w-fit rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800"
             >
               Save
+            </button>
+          </form>
+        </div>
+
+        <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
+          <h2 className="text-sm font-medium text-zinc-700">File requests</h2>
+          <p className="mt-1 text-xs text-zinc-400">
+            Ask for specific items — your client sees each one as a pending item to fulfill.
+          </p>
+          {fileRequests && fileRequests.length > 0 && (
+            <ul className="mt-3 divide-y divide-zinc-100">
+              {fileRequests.map((request) => (
+                <li key={request.id} className="flex items-center justify-between py-2 text-sm">
+                  <span>{request.label}</span>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        request.status === "received"
+                          ? "bg-green-50 text-green-700"
+                          : "bg-zinc-100 text-zinc-600"
+                      }`}
+                    >
+                      {request.status === "received" ? "Received" : "Pending"}
+                    </span>
+                    <form action={deleteFileRequest}>
+                      <input type="hidden" name="project_id" value={project.id} />
+                      <input type="hidden" name="request_id" value={request.id} />
+                      <button type="submit" className="text-xs text-red-500 hover:text-red-700">
+                        Remove
+                      </button>
+                    </form>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form action={createFileRequest} className="mt-4 flex items-center gap-3">
+            <input type="hidden" name="project_id" value={project.id} />
+            <input
+              type="text"
+              name="label"
+              required
+              placeholder="e.g. Logo files"
+              className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            >
+              Add request
             </button>
           </form>
         </div>

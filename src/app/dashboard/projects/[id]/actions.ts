@@ -79,6 +79,46 @@ export async function updateNotes(formData: FormData) {
   redirect(`/dashboard/projects/${projectId}`);
 }
 
+export async function createFileRequest(formData: FormData) {
+  const projectId = formData.get("project_id") as string;
+  const label = (formData.get("label") as string)?.trim();
+
+  await assertOwnsProject(projectId);
+
+  if (!label) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent("Enter a name for the file request")}`);
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("file_requests").insert({ project_id: projectId, label });
+
+  if (error) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/dashboard/projects/${projectId}`);
+}
+
+export async function deleteFileRequest(formData: FormData) {
+  const projectId = formData.get("project_id") as string;
+  const requestId = formData.get("request_id") as string;
+
+  await assertOwnsProject(projectId);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("file_requests")
+    .delete()
+    .eq("id", requestId)
+    .eq("project_id", projectId);
+
+  if (error) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/dashboard/projects/${projectId}`);
+}
+
 export async function uploadFreelancerFile(formData: FormData) {
   const projectId = formData.get("project_id") as string;
   const file = formData.get("file") as File;
@@ -128,7 +168,7 @@ export async function deleteFile(formData: FormData) {
 
   const { data: file } = await service
     .from("project_files")
-    .select("file_path")
+    .select("file_path, file_request_id")
     .eq("id", fileId)
     .eq("project_id", projectId)
     .single();
@@ -143,6 +183,10 @@ export async function deleteFile(formData: FormData) {
 
   if (error) {
     redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (file.file_request_id) {
+    await service.from("file_requests").update({ status: "pending" }).eq("id", file.file_request_id);
   }
 
   redirect(`/dashboard/projects/${projectId}`);
