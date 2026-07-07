@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { formatRelativeTime } from "@/lib/format";
 import { signOut } from "../login/actions";
 
 const STAGE_STYLES: Record<string, string> = {
@@ -11,18 +12,81 @@ const STAGE_STYLES: Record<string, string> = {
   Complete: "bg-green-50 text-green-700",
 };
 
-export default async function DashboardPage() {
+const STAGES = ["Kickoff", "In Progress", "Review", "Revisions", "Complete"];
+
+const FILTERS = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "complete", label: "Complete" },
+];
+
+const SORTS = [
+  { value: "activity", label: "Recent activity" },
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "status", label: "Status" },
+];
+
+function buildHref(filter: string, sort: string, overrides: { filter?: string; sort?: string }) {
+  const params = new URLSearchParams({ filter, sort, ...overrides });
+  return `/dashboard?${params.toString()}`;
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string; sort?: string }>;
+}) {
+  const { filter: rawFilter, sort: rawSort } = await searchParams;
+  const filter = FILTERS.some((f) => f.value === rawFilter) ? rawFilter! : "all";
+  const sort = SORTS.some((s) => s.value === rawSort) ? rawSort! : "activity";
+
   const supabase = await createClient();
   const user = await getAuthenticatedUser();
 
   const { data: projects } = await supabase
     .from("projects")
-    .select("id, client_name, client_email, stage, created_at")
+    .select("id, client_name, client_email, stage, created_at, stage_updated_at")
     .order("created_at", { ascending: true });
 
-  const active = (projects ?? []).filter((p) => p.stage !== "Complete");
-  const complete = (projects ?? []).filter((p) => p.stage === "Complete");
-  const sorted = [...active, ...complete];
+  const projectIds = (projects ?? []).map((p) => p.id);
+  const { data: files } =
+    projectIds.length > 0
+      ? await supabase
+          .from("project_files")
+          .select("project_id, uploaded_by, created_at")
+          .in("project_id", projectIds)
+          .order("created_at", { ascending: false })
+      : { data: [] };
+
+  const lastFileByProject = new Map<string, { created_at: string; uploaded_by: string }>();
+  for (const file of files ?? []) {
+    if (!lastFileByProject.has(file.project_id)) {
+      lastFileByProject.set(file.project_id, file);
+    }
+  }
+
+  const withActivity = (projects ?? []).map((project) => {
+    const lastFile = lastFileByProject.get(project.id);
+    const lastFileAt = lastFile?.created_at ?? null;
+    const lastActivityAt =
+      lastFileAt && lastFileAt > project.stage_updated_at ? lastFileAt : project.stage_updated_at;
+    const isClientActivity = lastFileAt !== null && lastFileAt === lastActivityAt && lastFile?.uploaded_by === "client";
+    return { ...project, lastActivityAt, isClientActivity };
+  });
+
+  const filtered = withActivity.filter((p) => {
+    if (filter === "active") return p.stage !== "Complete";
+    if (filter === "complete") return p.stage === "Complete";
+    return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === "newest") return b.created_at.localeCompare(a.created_at);
+    if (sort === "oldest") return a.created_at.localeCompare(b.created_at);
+    if (sort === "status") return STAGES.indexOf(a.stage) - STAGES.indexOf(b.stage);
+    return b.lastActivityAt.localeCompare(a.lastActivityAt);
+  });
 
   return (
     <div className="min-h-screen bg-zinc-50 p-8">
@@ -52,8 +116,44 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex gap-1 rounded-md border border-zinc-200 bg-white p-1">
+            {FILTERS.map((f) => (
+              <Link
+                key={f.value}
+                href={buildHref(filter, sort, { filter: f.value })}
+                className={`rounded px-2.5 py-1 text-xs font-medium ${
+                  filter === f.value ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-50"
+                }`}
+              >
+                {f.label}
+              </Link>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-zinc-500">
+            Sort:
+            <div className="flex gap-1 rounded-md border border-zinc-200 bg-white p-1">
+              {SORTS.map((s) => (
+                <Link
+                  key={s.value}
+                  href={buildHref(filter, sort, { sort: s.value })}
+                  className={`rounded px-2.5 py-1 text-xs font-medium ${
+                    sort === s.value ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-50"
+                  }`}
+                >
+                  {s.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {sorted.length === 0 ? (
-          <p className="mt-4 text-sm text-zinc-400">No projects yet. Create your first one.</p>
+          <p className="mt-4 text-sm text-zinc-400">
+            {projects && projects.length > 0
+              ? "No projects match this filter."
+              : "No projects yet. Create your first one."}
+          </p>
         ) : (
           <ul className="mt-4 divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white">
             {sorted.map((project) => (
@@ -65,6 +165,12 @@ export default async function DashboardPage() {
                   <div>
                     <p className="text-sm font-medium text-zinc-900">{project.client_name}</p>
                     <p className="text-xs text-zinc-500">{project.client_email}</p>
+                    <p className="mt-1 text-xs text-zinc-400">
+                      {project.isClientActivity && (
+                        <span className="mr-1 font-medium text-amber-600">Client uploaded a file ·</span>
+                      )}
+                      Active {formatRelativeTime(project.lastActivityAt)}
+                    </p>
                   </div>
                   <span
                     className={`rounded-full px-2.5 py-1 text-xs font-medium ${STAGE_STYLES[project.stage] ?? "bg-zinc-100 text-zinc-700"}`}

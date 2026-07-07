@@ -14,7 +14,7 @@ export default function UpgradePage() {
 
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
           <p className="text-sm text-zinc-600">
-            The free plan includes 1 active client project. Upgrade to Pro for unlimited active
+            The Free plan includes 1 active project. Upgrade to Pro for unlimited active
             projects.
           </p>
           <p className="mt-4 text-2xl font-semibold text-zinc-900">

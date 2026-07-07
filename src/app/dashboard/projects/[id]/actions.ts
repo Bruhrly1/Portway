@@ -64,6 +64,22 @@ export async function updateStage(formData: FormData) {
   redirect(`/dashboard/projects/${projectId}`);
 }
 
+export async function updateNotes(formData: FormData) {
+  const projectId = formData.get("project_id") as string;
+  const notes = formData.get("notes") as string;
+
+  await assertOwnsProject(projectId);
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("projects").update({ notes }).eq("id", projectId);
+
+  if (error) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/dashboard/projects/${projectId}`);
+}
+
 export async function uploadFreelancerFile(formData: FormData) {
   const projectId = formData.get("project_id") as string;
   const file = formData.get("file") as File;

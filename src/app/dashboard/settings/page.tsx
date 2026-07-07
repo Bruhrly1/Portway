@@ -71,13 +71,28 @@ export default async function SettingsPage({
 
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
           <h2 className="text-sm font-medium text-zinc-700">Logo</h2>
-          {freelancer?.logo_url && (
+          {freelancer?.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={freelancer.logo_url}
               alt="Current logo"
               className="mt-3 h-16 w-16 rounded-md border border-zinc-200 object-contain"
             />
+          ) : (
+            <div className="mt-3 flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-zinc-300 text-zinc-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="h-6 w-6"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="9" cy="9" r="2" />
+                <path d="m21 15-5-5L5 21" />
+              </svg>
+            </div>
           )}
           <form action={uploadLogo} className="mt-4 flex items-center gap-3">
             <input
@@ -99,7 +114,9 @@ export default async function SettingsPage({
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
           <h2 className="text-sm font-medium text-zinc-700">Plan</h2>
           <p className="mt-2 text-sm text-zinc-600">
-            {freelancer?.subscription_status === "active" ? "Pro" : "Free (1 active project)"}
+            {freelancer?.subscription_status === "active"
+              ? "Pro — unlimited projects ($9/month)"
+              : "Free — 1 active project"}
           </p>
           {freelancer?.subscription_status === "active" ? (
             <form action={openBillingPortal} className="mt-4">

@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { deleteFile, generateClientLink, updateStage, uploadFreelancerFile } from "./actions";
+import { CopyLinkButton } from "./CopyLinkButton";
+import { deleteFile, generateClientLink, updateNotes, updateStage, uploadFreelancerFile } from "./actions";
 
 const STAGES = ["Kickoff", "In Progress", "Review", "Revisions", "Complete"];
 
@@ -18,7 +19,11 @@ export default async function ProjectDetailPage({
   const supabase = await createClient();
 
   const [{ data: project }, { data: tokens }, { data: files }] = await Promise.all([
-    supabase.from("projects").select("id, client_name, client_email, stage").eq("id", id).single(),
+    supabase
+      .from("projects")
+      .select("id, client_name, client_email, stage, notes")
+      .eq("id", id)
+      .single(),
     supabase
       .from("client_access_tokens")
       .select("token, expires_at")
@@ -89,9 +94,12 @@ export default async function ProjectDetailPage({
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
           <h2 className="text-sm font-medium text-zinc-700">Client portal link</h2>
           {portalUrl ? (
-            <p className="mt-2 break-all rounded-md bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
-              {portalUrl}
-            </p>
+            <div className="mt-2 flex items-center gap-3">
+              <p className="min-w-0 flex-1 break-all rounded-md bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+                {portalUrl}
+              </p>
+              <CopyLinkButton url={portalUrl} />
+            </div>
           ) : (
             <>
               <p className="mt-1 text-sm text-zinc-500">
@@ -109,6 +117,27 @@ export default async function ProjectDetailPage({
               </form>
             </>
           )}
+        </div>
+
+        <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
+          <h2 className="text-sm font-medium text-zinc-700">Notes</h2>
+          <p className="mt-1 text-xs text-zinc-400">Private — only visible to you, never to the client.</p>
+          <form action={updateNotes} className="mt-3 flex flex-col gap-3">
+            <input type="hidden" name="project_id" value={project.id} />
+            <textarea
+              name="notes"
+              rows={3}
+              defaultValue={project.notes ?? ""}
+              placeholder="e.g. need another day because the client changed scope"
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="w-fit rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            >
+              Save
+            </button>
+          </form>
         </div>
 
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
