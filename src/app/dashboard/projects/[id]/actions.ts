@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { STAGES } from "@/lib/stages";
 
 const TOKEN_TTL_DAYS = 365;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -40,8 +41,6 @@ export async function generateClientLink(formData: FormData) {
 
   redirect(`/dashboard/projects/${projectId}`);
 }
-
-const STAGES = ["Kickoff", "In Progress", "Review", "Revisions", "Complete"];
 
 export async function updateStage(formData: FormData) {
   const projectId = formData.get("project_id") as string;

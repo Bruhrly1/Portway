@@ -3,9 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getReadableTextColor } from "@/lib/color";
 import { formatFileSize, formatTimestamp, isImageFilename } from "@/lib/format";
+import { STAGES } from "@/lib/stages";
 import { deleteClientFile, respondToReview, uploadClientFile } from "./actions";
-
-const STAGES = ["Kickoff", "In Progress", "Review", "Revisions", "Complete"];
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
   Kickoff: "We're getting your project set up and will begin work shortly.",
@@ -59,37 +58,32 @@ export default async function ClientPortalPage({
       .select("id, filename, uploaded_by, file_path, created_at")
       .eq("project_id", project.project_id)
       .order("created_at", { ascending: false }),
-    service.from("projects").select("freelancer_id").eq("id", project.project_id).single(),
-    service.storage.from("project-files").list(project.project_id),
+    service.from("projects").select("freelancers(email)").eq("id", project.project_id).single(),
+    service.storage.from("project-files").list(project.project_id, { limit: 1000 }),
   ]);
 
-  const freelancerEmail = projectRow
-    ? (
-        await service
-          .from("freelancers")
-          .select("email")
-          .eq("id", projectRow.freelancer_id)
-          .single()
-      ).data?.email ?? null
-    : null;
+  const freelancersData = projectRow?.freelancers as { email: string } | { email: string }[] | null | undefined;
+  const freelancerEmail = (Array.isArray(freelancersData) ? freelancersData[0] : freelancersData)?.email ?? null;
 
   const sizeByObjectName = new Map(
     (storageObjects ?? []).map((obj) => [obj.name, obj.metadata?.size ?? null]),
   );
 
-  const filesWithUrls = await Promise.all(
-    (files ?? []).map(async (file) => {
-      const { data: signed } = await service.storage
+  const { data: signedUrls } = files && files.length > 0
+    ? await service.storage
         .from("project-files")
-        .createSignedUrl(file.file_path, 3600);
-      const objectName = file.file_path.split("/").pop() ?? "";
-      return {
-        ...file,
-        signedUrl: signed?.signedUrl ?? null,
-        size: sizeByObjectName.get(objectName) ?? null,
-      };
-    }),
-  );
+        .createSignedUrls(files.map((f) => f.file_path), 3600)
+    : { data: [] };
+  const signedUrlByPath = new Map((signedUrls ?? []).map((s) => [s.path, s.signedUrl]));
+
+  const filesWithUrls = (files ?? []).map((file) => {
+    const objectName = file.file_path.split("/").pop() ?? "";
+    return {
+      ...file,
+      signedUrl: signedUrlByPath.get(file.file_path) ?? null,
+      size: sizeByObjectName.get(objectName) ?? null,
+    };
+  });
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -129,15 +123,7 @@ export default async function ClientPortalPage({
 
               if (isCompleted) {
                 return (
-                  <li
-                    key={stage}
-                    className="rounded-full px-3 py-1 text-xs font-medium"
-                    style={{
-                      backgroundColor: accent,
-                      color: accentText,
-                      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
-                    }}
-                  >
+                  <li key={stage} className="rounded-full px-3 py-1 text-xs font-medium" style={accentButtonStyle}>
                     ✓ {stage}
                   </li>
                 );

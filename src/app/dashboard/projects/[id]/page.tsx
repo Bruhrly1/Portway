@@ -2,10 +2,9 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { STAGES } from "@/lib/stages";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { deleteFile, generateClientLink, updateNotes, updateStage, uploadFreelancerFile } from "./actions";
-
-const STAGES = ["Kickoff", "In Progress", "Review", "Revisions", "Complete"];
 
 export default async function ProjectDetailPage({
   params,

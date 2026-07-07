@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { formatRelativeTime } from "@/lib/format";
+import { STAGES } from "@/lib/stages";
 import { signOut } from "../login/actions";
 
 const STAGE_STYLES: Record<string, string> = {
@@ -11,8 +12,6 @@ const STAGE_STYLES: Record<string, string> = {
   Revisions: "bg-orange-50 text-orange-700",
   Complete: "bg-green-50 text-green-700",
 };
-
-const STAGES = ["Kickoff", "In Progress", "Review", "Revisions", "Complete"];
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -69,9 +68,10 @@ export default async function DashboardPage({
   const withActivity = (projects ?? []).map((project) => {
     const lastFile = lastFileByProject.get(project.id);
     const lastFileAt = lastFile?.created_at ?? null;
-    const lastActivityAt =
-      lastFileAt && lastFileAt > project.stage_updated_at ? lastFileAt : project.stage_updated_at;
-    const isClientActivity = lastFileAt !== null && lastFileAt === lastActivityAt && lastFile?.uploaded_by === "client";
+    const stageUpdatedAt = project.stage_updated_at ?? project.created_at;
+    const isNewerFileActivity = lastFileAt !== null && lastFileAt > stageUpdatedAt;
+    const lastActivityAt = isNewerFileActivity ? lastFileAt : stageUpdatedAt;
+    const isClientActivity = isNewerFileActivity && lastFile?.uploaded_by === "client";
     return { ...project, lastActivityAt, isClientActivity };
   });
 
@@ -85,6 +85,11 @@ export default async function DashboardPage({
     if (sort === "newest") return b.created_at.localeCompare(a.created_at);
     if (sort === "oldest") return a.created_at.localeCompare(b.created_at);
     if (sort === "status") return STAGES.indexOf(a.stage) - STAGES.indexOf(b.stage);
+    // "activity" (default): active projects always rank above completed ones,
+    // most-recent activity first within each group.
+    const aComplete = a.stage === "Complete" ? 1 : 0;
+    const bComplete = b.stage === "Complete" ? 1 : 0;
+    if (aComplete !== bComplete) return aComplete - bComplete;
     return b.lastActivityAt.localeCompare(a.lastActivityAt);
   });
 
