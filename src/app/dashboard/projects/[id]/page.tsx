@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { STAGES } from "@/lib/stages";
+import { ApprovalNote } from "@/components/ApprovalNote";
+import { StatusBadge } from "@/components/StatusBadge";
 import { CopyLinkButton } from "./CopyLinkButton";
 import {
   createFileRequest,
@@ -28,7 +30,7 @@ export default async function ProjectDetailPage({
   const [{ data: project }, { data: tokens }, { data: files }, { data: fileRequests }] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, client_name, client_email, stage, notes")
+      .select("id, client_name, client_email, stage, notes, approved_by_name, approved_at")
       .eq("id", id)
       .single(),
     supabase
@@ -101,6 +103,7 @@ export default async function ProjectDetailPage({
               Update
             </button>
           </form>
+          <ApprovalNote approvedByName={project.approved_by_name} approvedAt={project.approved_at} />
         </div>
 
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
@@ -163,15 +166,7 @@ export default async function ProjectDetailPage({
                 <li key={request.id} className="flex items-center justify-between py-2 text-sm">
                   <span>{request.label}</span>
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                        request.status === "received"
-                          ? "bg-green-50 text-green-700"
-                          : "bg-zinc-100 text-zinc-600"
-                      }`}
-                    >
-                      {request.status === "received" ? "Received" : "Pending"}
-                    </span>
+                    <StatusBadge status={request.status} />
                     <form action={deleteFileRequest}>
                       <input type="hidden" name="project_id" value={project.id} />
                       <input type="hidden" name="request_id" value={request.id} />

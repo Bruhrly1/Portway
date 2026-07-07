@@ -83,13 +83,17 @@ export async function uploadForFileRequest(formData: FormData) {
 
   const { data: request } = await service
     .from("file_requests")
-    .select("id")
+    .select("id, status")
     .eq("id", requestId)
     .eq("project_id", projectId)
     .single();
 
   if (!request) {
     redirect(`/portal/${token}?error=${encodeURIComponent("File request not found")}`);
+  }
+
+  if (request.status === "received") {
+    redirect(`/portal/${token}?error=${encodeURIComponent("This item has already been fulfilled")}`);
   }
 
   const path = `${projectId}/${randomBytes(16).toString("hex")}`;
@@ -159,10 +163,15 @@ export async function deleteClientFile(formData: FormData) {
 export async function respondToReview(formData: FormData) {
   const token = formData.get("token") as string;
   const decision = formData.get("decision") as string;
+  const approverName = (formData.get("name") as string)?.trim();
 
   const projectId = await getProjectIdForToken(token);
   if (!projectId) {
     redirect(`/portal/${token}?error=${encodeURIComponent("This link is no longer valid")}`);
+  }
+
+  if (decision === "approve" && !approverName) {
+    redirect(`/portal/${token}?error=${encodeURIComponent("Type your name to approve")}`);
   }
 
   const service = createServiceClient();
@@ -184,6 +193,9 @@ export async function respondToReview(formData: FormData) {
       stage: nextStage,
       stage_updated_at: new Date().toISOString(),
       last_reminder_sent_at: null,
+      ...(decision === "approve"
+        ? { approved_by_name: approverName, approved_at: new Date().toISOString() }
+        : { approved_by_name: null, approved_at: null }),
     })
     .eq("id", projectId);
 

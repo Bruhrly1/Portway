@@ -4,6 +4,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { getReadableTextColor } from "@/lib/color";
 import { formatFileSize, formatTimestamp, isImageFilename } from "@/lib/format";
 import { STAGES } from "@/lib/stages";
+import { ApprovalNote } from "@/components/ApprovalNote";
+import { StatusBadge } from "@/components/StatusBadge";
 import { deleteClientFile, respondToReview, uploadClientFile, uploadForFileRequest } from "./actions";
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
@@ -59,7 +61,11 @@ export default async function ClientPortalPage({
         .select("id, filename, uploaded_by, file_path, created_at, file_request_id")
         .eq("project_id", project.project_id)
         .order("created_at", { ascending: false }),
-      service.from("projects").select("freelancers(email)").eq("id", project.project_id).single(),
+      service
+        .from("projects")
+        .select("freelancers(email), approved_by_name, approved_at")
+        .eq("id", project.project_id)
+        .single(),
       service.storage.from("project-files").list(project.project_id, { limit: 1000 }),
       service
         .from("file_requests")
@@ -91,9 +97,14 @@ export default async function ClientPortalPage({
     };
   });
 
-  const fileByRequestId = new Map(
-    filesWithUrls.filter((f) => f.file_request_id).map((f) => [f.file_request_id, f]),
-  );
+  // filesWithUrls is newest-first; keep the first (most recent) match per
+  // request in case a request was ever fulfilled more than once.
+  const fileByRequestId = new Map<string, (typeof filesWithUrls)[number]>();
+  for (const file of filesWithUrls) {
+    if (file.file_request_id && !fileByRequestId.has(file.file_request_id)) {
+      fileByRequestId.set(file.file_request_id, file);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -169,14 +180,32 @@ export default async function ClientPortalPage({
             <p className="mt-3 text-sm text-zinc-600">{STAGE_DESCRIPTIONS[project.stage]}</p>
           )}
 
+          <ApprovalNote
+            approvedByName={projectRow?.approved_by_name ?? null}
+            approvedAt={projectRow?.approved_at ?? null}
+          />
+
           {project.stage === "Review" && (
-            <div className="mt-5 flex gap-3 border-t border-zinc-100 pt-5">
-              <form action={respondToReview}>
+            <div className="mt-5 flex flex-col gap-3 border-t border-zinc-100 pt-5 sm:flex-row sm:items-end">
+              <form action={respondToReview} className="flex flex-1 items-end gap-3">
+                <div className="flex-1">
+                  <label htmlFor="approver-name" className="block text-xs text-zinc-500">
+                    Type your name to approve
+                  </label>
+                  <input
+                    id="approver-name"
+                    type="text"
+                    name="name"
+                    required
+                    placeholder="Your name"
+                    className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+                  />
+                </div>
                 <input type="hidden" name="token" value={token} />
                 <input type="hidden" name="decision" value="approve" />
                 <button
                   type="submit"
-                  className="rounded-md px-3 py-2 text-sm font-medium hover:opacity-90"
+                  className="shrink-0 rounded-md px-3 py-2 text-sm font-medium hover:opacity-90"
                   style={accentButtonStyle}
                 >
                   Approve
@@ -206,15 +235,7 @@ export default async function ClientPortalPage({
                   <li key={request.id} className="py-3 text-sm">
                     <div className="flex items-center justify-between gap-3">
                       <span className="font-medium text-zinc-900">{request.label}</span>
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                          request.status === "received"
-                            ? "bg-green-50 text-green-700"
-                            : "bg-zinc-100 text-zinc-600"
-                        }`}
-                      >
-                        {request.status === "received" ? "Received" : "Pending"}
-                      </span>
+                      <StatusBadge status={request.status} />
                     </div>
                     {request.status === "received" && fulfilledBy ? (
                       <p className="mt-1 text-xs text-zinc-400">

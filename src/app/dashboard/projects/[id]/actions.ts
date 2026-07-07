@@ -51,9 +51,29 @@ export async function updateStage(formData: FormData) {
   }
 
   const supabase = await createClient();
+  const { data: current } = await supabase
+    .from("projects")
+    .select("stage")
+    .eq("id", projectId)
+    .single();
+
+  // Resubmitting the same stage (e.g. a stray double-click) isn't a real
+  // transition - leave stage_updated_at and the approval trail untouched.
+  if (current?.stage === stage) {
+    redirect(`/dashboard/projects/${projectId}`);
+  }
+
   const { error } = await supabase
     .from("projects")
-    .update({ stage, stage_updated_at: new Date().toISOString(), last_reminder_sent_at: null })
+    .update({
+      stage,
+      stage_updated_at: new Date().toISOString(),
+      last_reminder_sent_at: null,
+      // A real stage change means whatever approval happened previously no
+      // longer reflects the project's current state.
+      approved_by_name: null,
+      approved_at: null,
+    })
     .eq("id", projectId);
 
   if (error) {
