@@ -12,6 +12,7 @@ import {
   deleteFile,
   deleteFileRequest,
   generateClientLink,
+  saveAsTemplate,
   updateNotes,
   updateStage,
   uploadFreelancerFile,
@@ -203,6 +204,24 @@ export default async function ProjectDetailPage({
               Add request
             </button>
           </form>
+          {fileRequests && fileRequests.length > 0 && (
+            <form action={saveAsTemplate} className="mt-3 flex items-center gap-3 border-t border-zinc-100 pt-3">
+              <input type="hidden" name="project_id" value={project.id} />
+              <input
+                type="text"
+                name="template_name"
+                required
+                placeholder="Template name, e.g. Standard Logo Package"
+                className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              >
+                Save as template
+              </button>
+            </form>
+          )}
         </div>
 
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">

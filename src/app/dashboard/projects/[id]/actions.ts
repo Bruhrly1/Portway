@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { STAGES } from "@/lib/stages";
 import { logActivity } from "@/lib/activity";
 
@@ -144,6 +145,47 @@ export async function deleteFileRequest(formData: FormData) {
   }
 
   await logActivity(projectId, "file_request_removed", "freelancer", { label: deleted.label });
+
+  redirect(`/dashboard/projects/${projectId}`);
+}
+
+export async function saveAsTemplate(formData: FormData) {
+  const projectId = formData.get("project_id") as string;
+  const name = (formData.get("template_name") as string)?.trim();
+
+  await assertOwnsProject(projectId);
+
+  if (!name) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent("Enter a name for the template")}`);
+  }
+
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const supabase = await createClient();
+
+  const { data: requests } = await supabase
+    .from("file_requests")
+    .select("label")
+    .eq("project_id", projectId);
+
+  const labels = (requests ?? []).map((r) => r.label);
+
+  if (labels.length === 0) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent("Add at least one file request before saving a template")}`);
+  }
+
+  const { error } = await supabase.from("project_templates").insert({
+    freelancer_id: user.id,
+    name,
+    file_request_labels: labels,
+  });
+
+  if (error) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
+  }
 
   redirect(`/dashboard/projects/${projectId}`);
 }
