@@ -6,6 +6,7 @@ import { formatFileSize, formatTimestamp, isImageFilename } from "@/lib/format";
 import { STAGES } from "@/lib/stages";
 import { ApprovalNote } from "@/components/ApprovalNote";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { deleteClientFile, respondToReview, uploadClientFile, uploadForFileRequest } from "./actions";
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
@@ -54,25 +55,36 @@ export default async function ClientPortalPage({
   const currentStageIndex = STAGES.indexOf(project.stage);
 
   const service = createServiceClient();
-  const [{ data: files }, { data: projectRow }, { data: storageObjects }, { data: fileRequests }] =
-    await Promise.all([
-      service
-        .from("project_files")
-        .select("id, filename, uploaded_by, file_path, created_at, file_request_id")
-        .eq("project_id", project.project_id)
-        .order("created_at", { ascending: false }),
-      service
-        .from("projects")
-        .select("freelancers(email), approved_by_name, approved_at")
-        .eq("id", project.project_id)
-        .single(),
-      service.storage.from("project-files").list(project.project_id, { limit: 1000 }),
-      service
-        .from("file_requests")
-        .select("id, label, status")
-        .eq("project_id", project.project_id)
-        .order("created_at", { ascending: true }),
-    ]);
+  const [
+    { data: files },
+    { data: projectRow },
+    { data: storageObjects },
+    { data: fileRequests },
+    { data: activity },
+  ] = await Promise.all([
+    service
+      .from("project_files")
+      .select("id, filename, uploaded_by, file_path, created_at, file_request_id")
+      .eq("project_id", project.project_id)
+      .order("created_at", { ascending: false }),
+    service
+      .from("projects")
+      .select("freelancers(email), approved_by_name, approved_at")
+      .eq("id", project.project_id)
+      .single(),
+    service.storage.from("project-files").list(project.project_id, { limit: 1000 }),
+    service
+      .from("file_requests")
+      .select("id, label, status")
+      .eq("project_id", project.project_id)
+      .order("created_at", { ascending: true }),
+    service
+      .from("activity_log")
+      .select("id, event_type, actor, detail, created_at")
+      .eq("project_id", project.project_id)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
 
   const freelancersData = projectRow?.freelancers as { email: string } | { email: string }[] | null | undefined;
   const freelancerEmail = (Array.isArray(freelancersData) ? freelancersData[0] : freelancersData)?.email ?? null;
@@ -357,6 +369,13 @@ export default async function ClientPortalPage({
             </button>
           </form>
         </div>
+
+        {activity && activity.length > 0 && (
+          <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
+            <h2 className="text-sm font-medium text-zinc-700">Activity</h2>
+            <ActivityTimeline events={activity} viewerIsClient />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { STAGES } from "@/lib/stages";
 import { ApprovalNote } from "@/components/ApprovalNote";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { CopyLinkButton } from "./CopyLinkButton";
 import {
   createFileRequest,
@@ -27,30 +28,37 @@ export default async function ProjectDetailPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: project }, { data: tokens }, { data: files }, { data: fileRequests }] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("id, client_name, client_email, stage, notes, approved_by_name, approved_at")
-      .eq("id", id)
-      .single(),
-    supabase
-      .from("client_access_tokens")
-      .select("token, expires_at")
-      .eq("project_id", id)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1),
-    supabase
-      .from("project_files")
-      .select("id, filename, uploaded_by, file_path, created_at")
-      .eq("project_id", id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("file_requests")
-      .select("id, label, status")
-      .eq("project_id", id)
-      .order("created_at", { ascending: true }),
-  ]);
+  const [{ data: project }, { data: tokens }, { data: files }, { data: fileRequests }, { data: activity }] =
+    await Promise.all([
+      supabase
+        .from("projects")
+        .select("id, client_name, client_email, stage, notes, approved_by_name, approved_at")
+        .eq("id", id)
+        .single(),
+      supabase
+        .from("client_access_tokens")
+        .select("token, expires_at")
+        .eq("project_id", id)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1),
+      supabase
+        .from("project_files")
+        .select("id, filename, uploaded_by, file_path, created_at")
+        .eq("project_id", id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("file_requests")
+        .select("id, label, status")
+        .eq("project_id", id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("activity_log")
+        .select("id, event_type, actor, detail, created_at")
+        .eq("project_id", id)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
 
   if (!project) {
     notFound();
@@ -250,6 +258,13 @@ export default async function ProjectDetailPage({
             </button>
           </form>
         </div>
+
+        {activity && activity.length > 0 && (
+          <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
+            <h2 className="text-sm font-medium text-zinc-700">Activity</h2>
+            <ActivityTimeline events={activity} viewerIsClient={false} />
+          </div>
+        )}
       </div>
     </div>
   );

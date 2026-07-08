@@ -3,6 +3,7 @@
 import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
+import { logActivity } from "@/lib/activity";
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 
@@ -58,6 +59,8 @@ export async function uploadClientFile(formData: FormData) {
     redirect(`/portal/${token}?error=${encodeURIComponent(insertError.message)}`);
   }
 
+  await logActivity(projectId, "file_uploaded", "client", { filename: file.name });
+
   redirect(`/portal/${token}`);
 }
 
@@ -83,7 +86,7 @@ export async function uploadForFileRequest(formData: FormData) {
 
   const { data: request } = await service
     .from("file_requests")
-    .select("id, status")
+    .select("id, status, label")
     .eq("id", requestId)
     .eq("project_id", projectId)
     .single();
@@ -118,6 +121,11 @@ export async function uploadForFileRequest(formData: FormData) {
 
   await service.from("file_requests").update({ status: "received" }).eq("id", requestId);
 
+  await logActivity(projectId, "file_uploaded", "client", {
+    filename: file.name,
+    requestLabel: request.label,
+  });
+
   redirect(`/portal/${token}`);
 }
 
@@ -134,7 +142,7 @@ export async function deleteClientFile(formData: FormData) {
 
   const { data: file } = await service
     .from("project_files")
-    .select("file_path, uploaded_by, file_request_id")
+    .select("file_path, filename, uploaded_by, file_request_id")
     .eq("id", fileId)
     .eq("project_id", projectId)
     .single();
@@ -156,6 +164,8 @@ export async function deleteClientFile(formData: FormData) {
   if (file.file_request_id) {
     await service.from("file_requests").update({ status: "pending" }).eq("id", file.file_request_id);
   }
+
+  await logActivity(projectId, "file_removed", "client", { filename: file.filename });
 
   redirect(`/portal/${token}`);
 }
@@ -201,6 +211,12 @@ export async function respondToReview(formData: FormData) {
 
   if (error) {
     redirect(`/portal/${token}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (decision === "approve") {
+    await logActivity(projectId, "approved", "client", { name: approverName });
+  } else {
+    await logActivity(projectId, "changes_requested", "client");
   }
 
   redirect(`/portal/${token}`);

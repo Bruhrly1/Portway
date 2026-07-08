@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { STAGES } from "@/lib/stages";
+import { logActivity } from "@/lib/activity";
 
 const TOKEN_TTL_DAYS = 365;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -80,6 +81,8 @@ export async function updateStage(formData: FormData) {
     redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
   }
 
+  await logActivity(projectId, "stage_changed", "freelancer", { stage });
+
   redirect(`/dashboard/projects/${projectId}`);
 }
 
@@ -116,6 +119,8 @@ export async function createFileRequest(formData: FormData) {
     redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
   }
 
+  await logActivity(projectId, "file_request_created", "freelancer", { label });
+
   redirect(`/dashboard/projects/${projectId}`);
 }
 
@@ -126,15 +131,19 @@ export async function deleteFileRequest(formData: FormData) {
   await assertOwnsProject(projectId);
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from("file_requests")
     .delete()
     .eq("id", requestId)
-    .eq("project_id", projectId);
+    .eq("project_id", projectId)
+    .select("label")
+    .single();
 
   if (error) {
     redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
   }
+
+  await logActivity(projectId, "file_request_removed", "freelancer", { label: deleted.label });
 
   redirect(`/dashboard/projects/${projectId}`);
 }
@@ -175,6 +184,8 @@ export async function uploadFreelancerFile(formData: FormData) {
     redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(insertError.message)}`);
   }
 
+  await logActivity(projectId, "file_uploaded", "freelancer", { filename: file.name });
+
   redirect(`/dashboard/projects/${projectId}`);
 }
 
@@ -188,7 +199,7 @@ export async function deleteFile(formData: FormData) {
 
   const { data: file } = await service
     .from("project_files")
-    .select("file_path, file_request_id")
+    .select("file_path, filename, file_request_id")
     .eq("id", fileId)
     .eq("project_id", projectId)
     .single();
@@ -208,6 +219,8 @@ export async function deleteFile(formData: FormData) {
   if (file.file_request_id) {
     await service.from("file_requests").update({ status: "pending" }).eq("id", file.file_request_id);
   }
+
+  await logActivity(projectId, "file_removed", "freelancer", { filename: file.filename });
 
   redirect(`/dashboard/projects/${projectId}`);
 }

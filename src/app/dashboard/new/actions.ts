@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 
 export async function createProject(formData: FormData) {
   const user = await getAuthenticatedUser();
@@ -25,15 +26,21 @@ export async function createProject(formData: FormData) {
   const clientName = formData.get("client_name") as string;
   const clientEmail = formData.get("client_email") as string;
 
-  const { error } = await supabase.from("projects").insert({
-    freelancer_id: user.id,
-    client_name: clientName,
-    client_email: clientEmail,
-  });
+  const { data: project, error } = await supabase
+    .from("projects")
+    .insert({
+      freelancer_id: user.id,
+      client_name: clientName,
+      client_email: clientEmail,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     redirect(`/dashboard/new?error=${encodeURIComponent(error.message)}`);
   }
+
+  await logActivity(project.id, "created", "freelancer");
 
   redirect("/dashboard");
 }
