@@ -266,3 +266,49 @@ export async function deleteFile(formData: FormData) {
 
   redirect(`/dashboard/projects/${projectId}`);
 }
+
+export async function deleteProject(formData: FormData) {
+  const projectId = formData.get("project_id") as string;
+
+  await assertOwnsProject(projectId);
+
+  const service = createServiceClient();
+
+  const { data: files } = await service
+    .from("project_files")
+    .select("file_path")
+    .eq("project_id", projectId);
+
+  if (files && files.length > 0) {
+    await service.storage.from("project-files").remove(files.map((f) => f.file_path));
+  }
+
+  // file_requests and activity_log rows cascade-delete automatically via
+  // their FK to projects(id); project_files and client_access_tokens are
+  // cleaned up explicitly here since their cascade behavior isn't relied on.
+  const { error: filesDeleteError } = await service
+    .from("project_files")
+    .delete()
+    .eq("project_id", projectId);
+
+  if (filesDeleteError) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(filesDeleteError.message)}`);
+  }
+
+  const { error: tokensDeleteError } = await service
+    .from("client_access_tokens")
+    .delete()
+    .eq("project_id", projectId);
+
+  if (tokensDeleteError) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(tokensDeleteError.message)}`);
+  }
+
+  const { error } = await service.from("projects").delete().eq("id", projectId);
+
+  if (error) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect("/dashboard");
+}

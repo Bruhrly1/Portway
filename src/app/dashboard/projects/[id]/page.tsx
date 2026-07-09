@@ -7,10 +7,12 @@ import { ApprovalNote } from "@/components/ApprovalNote";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { CopyLinkButton } from "./CopyLinkButton";
+import { DeleteProjectButton } from "./DeleteProjectButton";
 import {
   createFileRequest,
   deleteFile,
   deleteFileRequest,
+  deleteProject,
   generateClientLink,
   saveAsTemplate,
   updateNotes,
@@ -284,6 +286,20 @@ export default async function ProjectDetailPage({
             <ActivityTimeline events={activity} viewerIsClient={false} />
           </div>
         )}
+
+        <div className="mt-6 rounded-lg border border-red-200 bg-white p-6">
+          <h2 className="text-sm font-medium text-red-700">Danger zone</h2>
+          <p className="mt-1 text-xs text-zinc-400">
+            Permanently deletes this project, its files, file requests, and activity history.
+          </p>
+          <div className="mt-3">
+            <DeleteProjectButton
+              projectId={project.id}
+              clientName={project.client_name}
+              action={deleteProject}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
