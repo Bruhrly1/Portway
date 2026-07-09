@@ -331,6 +331,7 @@ export default async function ClientPortalPage({
                         >
                           Upload
                         </button>
+                        <span className="w-full text-xs text-zinc-400">Max file size: 20MB</span>
                       </form>
                     )}
                   </li>
@@ -417,6 +418,7 @@ export default async function ClientPortalPage({
               Upload
             </button>
           </form>
+          <p className="mt-2 text-xs text-zinc-400">Max file size: 20MB</p>
         </div>
 
         {activity && activity.length > 0 && (

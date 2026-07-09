@@ -87,6 +87,33 @@ export async function updateStage(formData: FormData) {
   redirect(`/dashboard/projects/${projectId}`);
 }
 
+export async function updateProjectDetails(formData: FormData) {
+  const projectId = formData.get("project_id") as string;
+  const projectName = (formData.get("project_name") as string)?.trim();
+  const clientName = (formData.get("client_name") as string)?.trim();
+  const clientEmail = (formData.get("client_email") as string)?.trim();
+
+  await assertOwnsProject(projectId);
+
+  if (!projectName || !clientName || !clientEmail) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent("All fields are required")}`);
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ project_name: projectName, client_name: clientName, client_email: clientEmail })
+    .eq("id", projectId);
+
+  if (error) {
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await logActivity(projectId, "details_updated", "freelancer");
+
+  redirect(`/dashboard/projects/${projectId}`);
+}
+
 export async function updateNotes(formData: FormData) {
   const projectId = formData.get("project_id") as string;
   const notes = formData.get("notes") as string;

@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { DeleteProjectButton } from "./DeleteProjectButton";
+import { StageUpdateForm } from "./StageUpdateForm";
 import {
   createFileRequest,
   deleteFile,
@@ -16,6 +17,7 @@ import {
   generateClientLink,
   saveAsTemplate,
   updateNotes,
+  updateProjectDetails,
   updateStage,
   uploadFreelancerFile,
 } from "./actions";
@@ -94,28 +96,71 @@ export default async function ProjectDetailPage({
           <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         )}
 
-        <div className="mt-8 rounded-lg border border-zinc-200 bg-white p-6">
-          <h2 className="text-sm font-medium text-zinc-700">Stage</h2>
-          <form action={updateStage} className="mt-3 flex items-center gap-3">
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-zinc-500 hover:text-zinc-700">
+            Edit project or client details
+          </summary>
+          <form
+            action={updateProjectDetails}
+            className="mt-3 flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-4"
+          >
             <input type="hidden" name="project_id" value={project.id} />
-            <select
-              name="stage"
-              defaultValue={project.stage}
-              className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
-            >
-              {STAGES.map((stage) => (
-                <option key={stage} value={stage}>
-                  {stage}
-                </option>
-              ))}
-            </select>
+            <div>
+              <label htmlFor="edit_project_name" className="block text-xs font-medium text-zinc-700">
+                Project name
+              </label>
+              <input
+                id="edit_project_name"
+                name="project_name"
+                type="text"
+                required
+                defaultValue={project.project_name}
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="edit_client_name" className="block text-xs font-medium text-zinc-700">
+                Client name
+              </label>
+              <input
+                id="edit_client_name"
+                name="client_name"
+                type="text"
+                required
+                defaultValue={project.client_name}
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="edit_client_email" className="block text-xs font-medium text-zinc-700">
+                Client email
+              </label>
+              <input
+                id="edit_client_email"
+                name="client_email"
+                type="email"
+                required
+                defaultValue={project.client_email}
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+              />
+            </div>
             <button
               type="submit"
-              className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+              className="w-fit rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800"
             >
-              Update
+              Save
             </button>
           </form>
+        </details>
+
+        <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
+          <h2 className="text-sm font-medium text-zinc-700">Stage</h2>
+          <StageUpdateForm
+            projectId={project.id}
+            currentStage={project.stage}
+            stages={STAGES}
+            action={updateStage}
+          />
           <ApprovalNote approvedByName={project.approved_by_name} approvedAt={project.approved_at} />
         </div>
 
@@ -265,7 +310,7 @@ export default async function ProjectDetailPage({
               ))}
             </ul>
           )}
-          <form action={uploadFreelancerFile} className="mt-4 flex items-center gap-3">
+          <form action={uploadFreelancerFile} className="mt-4 flex flex-wrap items-center gap-3">
             <input type="hidden" name="project_id" value={project.id} />
             <input
               type="file"
@@ -280,6 +325,7 @@ export default async function ProjectDetailPage({
               Upload
             </button>
           </form>
+          <p className="mt-2 text-xs text-zinc-400">Max file size: 20MB</p>
         </div>
 
         {activity && activity.length > 0 && (

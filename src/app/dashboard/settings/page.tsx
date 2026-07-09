@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { updateBranding, uploadLogo } from "./actions";
 import { openBillingPortal } from "../upgrade/actions";
+import { BrandingPreview } from "./BrandingPreview";
 
 export default async function SettingsPage({
   searchParams,
@@ -36,30 +37,11 @@ export default async function SettingsPage({
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">
           <h2 className="text-sm font-medium text-zinc-700">Business name & accent color</h2>
           <form action={updateBranding} className="mt-4 flex flex-col gap-4">
-            <div>
-              <label htmlFor="business_name" className="block text-sm font-medium text-zinc-700">
-                Business name
-              </label>
-              <input
-                id="business_name"
-                name="business_name"
-                type="text"
-                defaultValue={freelancer?.business_name ?? ""}
-                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="accent_color" className="block text-sm font-medium text-zinc-700">
-                Accent color
-              </label>
-              <input
-                id="accent_color"
-                name="accent_color"
-                type="color"
-                defaultValue={freelancer?.accent_color ?? "#18181b"}
-                className="mt-1 h-10 w-16 rounded-md border border-zinc-300"
-              />
-            </div>
+            <BrandingPreview
+              initialBusinessName={freelancer?.business_name ?? ""}
+              initialAccentColor={freelancer?.accent_color ?? "#18181b"}
+              logoUrl={freelancer?.logo_url ?? null}
+            />
             <button
               type="submit"
               className="w-fit rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800"
@@ -109,6 +91,7 @@ export default async function SettingsPage({
               Upload
             </button>
           </form>
+          <p className="mt-2 text-xs text-zinc-400">Max file size: 5MB</p>
         </div>
 
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6">

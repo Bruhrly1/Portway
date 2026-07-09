@@ -8,7 +8,8 @@ export type ActivityEventType =
   | "file_uploaded"
   | "file_removed"
   | "file_request_created"
-  | "file_request_removed";
+  | "file_request_removed"
+  | "details_updated";
 
 export type ActivityActor = "freelancer" | "client";
 

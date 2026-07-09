@@ -26,19 +26,25 @@ const SORTS = [
   { value: "status", label: "Status" },
 ];
 
-function buildHref(filter: string, sort: string, overrides: { filter?: string; sort?: string }) {
-  const params = new URLSearchParams({ filter, sort, ...overrides });
+function buildHref(
+  filter: string,
+  sort: string,
+  q: string,
+  overrides: { filter?: string; sort?: string },
+) {
+  const params = new URLSearchParams({ filter, sort, ...(q ? { q } : {}), ...overrides });
   return `/dashboard?${params.toString()}`;
 }
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; sort?: string }>;
+  searchParams: Promise<{ filter?: string; sort?: string; q?: string }>;
 }) {
-  const { filter: rawFilter, sort: rawSort } = await searchParams;
+  const { filter: rawFilter, sort: rawSort, q: rawQuery } = await searchParams;
   const filter = FILTERS.some((f) => f.value === rawFilter) ? rawFilter! : "all";
   const sort = SORTS.some((s) => s.value === rawSort) ? rawSort! : "activity";
+  const query = (rawQuery ?? "").trim();
 
   const supabase = await createClient();
   const user = await getAuthenticatedUser();
@@ -76,8 +82,14 @@ export default async function DashboardPage({
   });
 
   const filtered = withActivity.filter((p) => {
-    if (filter === "active") return p.stage !== "Complete";
-    if (filter === "complete") return p.stage === "Complete";
+    if (filter === "active" && p.stage === "Complete") return false;
+    if (filter === "complete" && p.stage !== "Complete") return false;
+
+    if (query) {
+      const haystack = `${p.project_name} ${p.client_name} ${p.client_email}`.toLowerCase();
+      if (!haystack.includes(query.toLowerCase())) return false;
+    }
+
     return true;
   });
 
@@ -111,6 +123,27 @@ export default async function DashboardPage({
           </div>
         </div>
 
+        <div className="mt-6 grid grid-cols-3 gap-3">
+          <div className="rounded-lg border border-zinc-200 bg-white p-4 text-center">
+            <p className="text-2xl font-semibold text-zinc-900">
+              {withActivity.filter((p) => p.stage !== "Complete").length}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">Active projects</p>
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-white p-4 text-center">
+            <p className="text-2xl font-semibold text-zinc-900">
+              {withActivity.filter((p) => p.stage === "Review").length}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">Awaiting client review</p>
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-white p-4 text-center">
+            <p className="text-2xl font-semibold text-zinc-900">
+              {withActivity.filter((p) => p.stage === "Complete").length}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">Completed</p>
+          </div>
+        </div>
+
         <div className="mt-8 flex items-center justify-between">
           <h2 className="text-sm font-medium text-zinc-700">Projects</h2>
           <Link
@@ -121,12 +154,24 @@ export default async function DashboardPage({
           </Link>
         </div>
 
+        <form className="mt-4">
+          <input type="hidden" name="filter" value={filter} />
+          <input type="hidden" name="sort" value={sort} />
+          <input
+            type="text"
+            name="q"
+            defaultValue={query}
+            placeholder="Search by client or project name..."
+            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+          />
+        </form>
+
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-1 rounded-md border border-zinc-200 bg-white p-1">
             {FILTERS.map((f) => (
               <Link
                 key={f.value}
-                href={buildHref(filter, sort, { filter: f.value })}
+                href={buildHref(filter, sort, query, { filter: f.value })}
                 className={`rounded px-2.5 py-1 text-xs font-medium ${
                   filter === f.value ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-50"
                 }`}
@@ -141,7 +186,7 @@ export default async function DashboardPage({
               {SORTS.map((s) => (
                 <Link
                   key={s.value}
-                  href={buildHref(filter, sort, { sort: s.value })}
+                  href={buildHref(filter, sort, query, { sort: s.value })}
                   className={`rounded px-2.5 py-1 text-xs font-medium ${
                     sort === s.value ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-50"
                   }`}
@@ -156,7 +201,9 @@ export default async function DashboardPage({
         {sorted.length === 0 ? (
           <p className="mt-4 text-sm text-zinc-400">
             {projects && projects.length > 0
-              ? "No projects match this filter."
+              ? query
+                ? "No projects match your search."
+                : "No projects match this filter."
               : "No projects yet. Create your first one."}
           </p>
         ) : (

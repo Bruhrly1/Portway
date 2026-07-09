@@ -34,6 +34,8 @@ function describe(event: ActivityEvent, viewerIsClient: boolean): string {
       return `${who} requested "${detail.label}"`;
     case "file_request_removed":
       return `${who} removed the request for "${detail.label}"`;
+    case "details_updated":
+      return `${who} updated the project details`;
     default:
       return event.event_type;
   }

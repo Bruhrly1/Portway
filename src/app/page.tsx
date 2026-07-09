@@ -159,7 +159,8 @@ export default function Home() {
             </Link>
           </div>
           <p className="mt-3 text-sm text-zinc-400">
-            Free plan: 1 active client. Pro plan: $9/month for unlimited clients.
+            Free plan: 1 active client. Pro plan: $9/month for unlimited clients. No credit
+            card required to start.
           </p>
 
           <PortalMockup />
