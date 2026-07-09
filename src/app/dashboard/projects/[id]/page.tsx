@@ -35,7 +35,7 @@ export default async function ProjectDetailPage({
     await Promise.all([
       supabase
         .from("projects")
-        .select("id, client_name, client_email, stage, notes, approved_by_name, approved_at")
+        .select("id, project_name, client_name, client_email, stage, notes, approved_by_name, approved_at")
         .eq("id", id)
         .single(),
       supabase
@@ -85,8 +85,10 @@ export default async function ProjectDetailPage({
   return (
     <div className="min-h-screen bg-zinc-50 p-8">
       <div className="mx-auto max-w-2xl">
-        <h1 className="text-xl font-semibold text-zinc-900">{project.client_name}</h1>
-        <p className="mt-1 text-sm text-zinc-500">{project.client_email}</p>
+        <h1 className="text-xl font-semibold text-zinc-900">{project.project_name}</h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          {project.client_name} · {project.client_email}
+        </p>
 
         {error && (
           <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
@@ -295,7 +297,7 @@ export default async function ProjectDetailPage({
           <div className="mt-3">
             <DeleteProjectButton
               projectId={project.id}
-              clientName={project.client_name}
+              projectName={project.project_name}
               action={deleteProject}
             />
           </div>

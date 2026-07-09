@@ -21,7 +21,7 @@ function describe(event: ActivityEvent, viewerIsClient: boolean): string {
     case "stage_changed":
       return `${who} moved this to ${detail.stage}`;
     case "changes_requested":
-      return `${who} requested changes`;
+      return detail.note ? `${who} requested changes: "${detail.note}"` : `${who} requested changes`;
     case "approved":
       return `Approved by ${detail.name}`;
     case "file_uploaded":

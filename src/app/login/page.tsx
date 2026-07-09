@@ -83,6 +83,28 @@ export default async function LoginPage({
             )}
           </div>
         </form>
+
+        {!isSignup && (
+          <p className="mt-4 text-center text-sm text-zinc-500">
+            <a href="/forgot-password" className="underline hover:text-zinc-700">
+              Forgot password?
+            </a>
+          </p>
+        )}
+
+        {isSignup && (
+          <p className="mt-4 text-center text-xs text-zinc-400">
+            By signing up, you agree to our{" "}
+            <a href="/terms" className="underline hover:text-zinc-600">
+              Terms
+            </a>{" "}
+            and{" "}
+            <a href="/privacy" className="underline hover:text-zinc-600">
+              Privacy Policy
+            </a>
+            .
+          </p>
+        )}
       </div>
     </div>
   );

@@ -23,6 +23,7 @@ export async function createProject(formData: FormData) {
     redirect("/dashboard/upgrade");
   }
 
+  const projectName = formData.get("project_name") as string;
   const clientName = formData.get("client_name") as string;
   const clientEmail = formData.get("client_email") as string;
   const templateId = formData.get("template_id") as string;
@@ -31,6 +32,7 @@ export async function createProject(formData: FormData) {
     .from("projects")
     .insert({
       freelancer_id: user.id,
+      project_name: projectName,
       client_name: clientName,
       client_email: clientEmail,
     })

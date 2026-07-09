@@ -174,6 +174,7 @@ export async function respondToReview(formData: FormData) {
   const token = formData.get("token") as string;
   const decision = formData.get("decision") as string;
   const approverName = (formData.get("name") as string)?.trim();
+  const note = (formData.get("note") as string)?.trim();
 
   const projectId = await getProjectIdForToken(token);
   if (!projectId) {
@@ -216,7 +217,7 @@ export async function respondToReview(formData: FormData) {
   if (decision === "approve") {
     await logActivity(projectId, "approved", "client", { name: approverName });
   } else {
-    await logActivity(projectId, "changes_requested", "client");
+    await logActivity(projectId, "changes_requested", "client", note ? { note } : undefined);
   }
 
   redirect(`/portal/${token}`);

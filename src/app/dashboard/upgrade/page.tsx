@@ -28,6 +28,17 @@ export default function UpgradePage() {
               Subscribe
             </button>
           </form>
+          <p className="mt-3 text-center text-xs text-zinc-400">
+            By subscribing, you agree to our{" "}
+            <Link href="/terms" className="underline hover:text-zinc-600">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline hover:text-zinc-600">
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </div>

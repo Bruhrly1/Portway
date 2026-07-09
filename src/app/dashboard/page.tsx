@@ -45,7 +45,7 @@ export default async function DashboardPage({
 
   const { data: projects } = await supabase
     .from("projects")
-    .select("id, client_name, client_email, stage, created_at, stage_updated_at")
+    .select("id, project_name, client_name, client_email, stage, created_at, stage_updated_at")
     .order("created_at", { ascending: true });
 
   const projectIds = (projects ?? []).map((p) => p.id);
@@ -168,8 +168,10 @@ export default async function DashboardPage({
                   className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50"
                 >
                   <div>
-                    <p className="text-sm font-medium text-zinc-900">{project.client_name}</p>
-                    <p className="text-xs text-zinc-500">{project.client_email}</p>
+                    <p className="text-sm font-medium text-zinc-900">{project.project_name}</p>
+                    <p className="text-xs text-zinc-500">
+                      {project.client_name} · {project.client_email}
+                    </p>
                     <p className="mt-1 text-xs text-zinc-400">
                       {project.isClientActivity && (
                         <span className="mr-1 font-medium text-amber-600">Client uploaded a file ·</span>

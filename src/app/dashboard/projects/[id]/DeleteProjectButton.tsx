@@ -2,11 +2,11 @@
 
 export function DeleteProjectButton({
   projectId,
-  clientName,
+  projectName,
   action,
 }: {
   projectId: string;
-  clientName: string;
+  projectName: string;
   action: (formData: FormData) => void;
 }) {
   return (
@@ -14,7 +14,7 @@ export function DeleteProjectButton({
       action={action}
       onSubmit={(e) => {
         const confirmed = window.confirm(
-          `Delete "${clientName}"? This permanently removes all files, file requests, and activity history for this project. This cannot be undone.`,
+          `Delete "${projectName}"? This permanently removes all files, file requests, and activity history for this project. This cannot be undone.`,
         );
         if (!confirmed) {
           e.preventDefault();

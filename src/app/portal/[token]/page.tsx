@@ -33,7 +33,44 @@ export default async function ClientPortalPage({
     .single();
 
   if (error || !data) {
-    notFound();
+    const service = createServiceClient();
+    const { data: tokenRow } = await service
+      .from("client_access_tokens")
+      .select("expires_at, projects(freelancers(email, business_name))")
+      .eq("token", token)
+      .maybeSingle();
+
+    if (!tokenRow || new Date(tokenRow.expires_at) > new Date()) {
+      notFound();
+    }
+
+    const projectsData = tokenRow.projects as
+      | { freelancers: { email: string; business_name: string | null } | { email: string; business_name: string | null }[] | null }
+      | { freelancers: { email: string; business_name: string | null } | { email: string; business_name: string | null }[] | null }[]
+      | null;
+    const projectData = Array.isArray(projectsData) ? projectsData[0] : projectsData;
+    const freelancersData = projectData?.freelancers;
+    const freelancer = Array.isArray(freelancersData) ? freelancersData[0] : freelancersData;
+
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-8">
+        <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-semibold text-zinc-900">This link has expired</h1>
+          <p className="mt-2 text-sm text-zinc-500">
+            {freelancer?.business_name ?? "Your freelancer"} can send you a new link.
+            {freelancer?.email && (
+              <>
+                {" "}
+                <a href={`mailto:${freelancer.email}`} className="underline hover:no-underline">
+                  Contact {freelancer.business_name ?? "them"}
+                </a>
+                .
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const project = data as {
@@ -69,7 +106,7 @@ export default async function ClientPortalPage({
       .order("created_at", { ascending: false }),
     service
       .from("projects")
-      .select("freelancers(email), approved_by_name, approved_at")
+      .select("project_name, freelancers(email), approved_by_name, approved_at")
       .eq("id", project.project_id)
       .single(),
     service.storage.from("project-files").list(project.project_id, { limit: 1000 }),
@@ -133,7 +170,9 @@ export default async function ClientPortalPage({
           )}
           <p className="text-sm text-zinc-500">{project.business_name ?? "Your freelancer"}</p>
         </div>
-        <h1 className="mt-1 text-2xl font-semibold text-zinc-900">{project.client_name}</h1>
+        <h1 className="mt-1 text-2xl font-semibold text-zinc-900">
+          {projectRow?.project_name ?? project.client_name}
+        </h1>
         {freelancerEmail && (
           <p className="mt-1 text-sm text-zinc-500">
             Questions?{" "}
@@ -198,8 +237,8 @@ export default async function ClientPortalPage({
           />
 
           {project.stage === "Review" && (
-            <div className="mt-5 flex flex-col gap-3 border-t border-zinc-100 pt-5 sm:flex-row sm:items-end">
-              <form action={respondToReview} className="flex flex-1 items-end gap-3">
+            <div className="mt-5 flex flex-col gap-4 border-t border-zinc-100 pt-5">
+              <form action={respondToReview} className="flex items-end gap-3">
                 <div className="flex-1">
                   <label htmlFor="approver-name" className="block text-xs text-zinc-500">
                     Type your name to approve
@@ -223,12 +262,22 @@ export default async function ClientPortalPage({
                   Approve
                 </button>
               </form>
-              <form action={respondToReview}>
+              <form action={respondToReview} className="flex flex-col gap-2">
+                <label htmlFor="changes-note" className="block text-xs text-zinc-500">
+                  What needs to change? (optional)
+                </label>
+                <textarea
+                  id="changes-note"
+                  name="note"
+                  rows={2}
+                  placeholder="e.g. Can we use a darker blue for the header?"
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+                />
                 <input type="hidden" name="token" value={token} />
                 <input type="hidden" name="decision" value="changes" />
                 <button
                   type="submit"
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  className="w-fit rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
                 >
                   Request changes
                 </button>
@@ -260,7 +309,7 @@ export default async function ClientPortalPage({
                         )}
                       </p>
                     ) : (
-                      <form action={uploadForFileRequest} className="mt-2 flex items-center gap-3">
+                      <form action={uploadForFileRequest} className="mt-2 flex flex-wrap items-center gap-3">
                         <input type="hidden" name="token" value={token} />
                         <input type="hidden" name="request_id" value={request.id} />
                         <input
@@ -346,7 +395,7 @@ export default async function ClientPortalPage({
               ))}
             </ul>
           )}
-          <form action={uploadClientFile} className="mt-4 flex items-center gap-3">
+          <form action={uploadClientFile} className="mt-4 flex flex-wrap items-center gap-3">
             <input type="hidden" name="token" value={token} />
             <input
               type="file"

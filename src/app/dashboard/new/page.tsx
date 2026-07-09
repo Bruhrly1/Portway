@@ -29,6 +29,19 @@ export default async function NewProjectPage({
 
         <form action={createProject} className="mt-6 flex flex-col gap-4">
           <div>
+            <label htmlFor="project_name" className="block text-sm font-medium text-zinc-700">
+              Project name
+            </label>
+            <input
+              id="project_name"
+              name="project_name"
+              type="text"
+              required
+              placeholder="e.g. Logo Redesign"
+              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+            />
+          </div>
+          <div>
             <label htmlFor="client_name" className="block text-sm font-medium text-zinc-700">
               Client name
             </label>
