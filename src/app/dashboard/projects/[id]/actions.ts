@@ -12,11 +12,18 @@ const TOKEN_TTL_DAYS = 365;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 
 async function assertOwnsProject(projectId: string) {
+  const user = await getAuthenticatedUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   const supabase = await createClient();
   const { data: project } = await supabase
     .from("projects")
     .select("id")
     .eq("id", projectId)
+    .eq("freelancer_id", user.id)
     .single();
 
   if (!project) {
@@ -26,6 +33,9 @@ async function assertOwnsProject(projectId: string) {
 
 export async function generateClientLink(formData: FormData) {
   const projectId = formData.get("project_id") as string;
+
+  await assertOwnsProject(projectId);
+
   const supabase = await createClient();
 
   const token = randomBytes(24).toString("base64url");
@@ -51,6 +61,8 @@ export async function updateStage(formData: FormData) {
   if (!STAGES.includes(stage)) {
     throw new Error("Invalid stage");
   }
+
+  await assertOwnsProject(projectId);
 
   const supabase = await createClient();
   const { data: current } = await supabase

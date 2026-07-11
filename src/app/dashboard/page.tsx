@@ -52,6 +52,7 @@ export default async function DashboardPage({
   const { data: projects } = await supabase
     .from("projects")
     .select("id, project_name, client_name, client_email, stage, created_at, stage_updated_at")
+    .eq("freelancer_id", user!.id)
     .order("created_at", { ascending: true });
 
   const projectIds = (projects ?? []).map((p) => p.id);

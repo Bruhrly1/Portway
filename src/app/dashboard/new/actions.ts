@@ -16,7 +16,11 @@ export async function createProject(formData: FormData) {
 
   const [{ data: freelancer }, { count }] = await Promise.all([
     supabase.from("freelancers").select("subscription_status").eq("id", user.id).single(),
-    supabase.from("projects").select("id", { count: "exact", head: true }).neq("stage", "Complete"),
+    supabase
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("freelancer_id", user.id)
+      .neq("stage", "Complete"),
   ]);
 
   if (freelancer?.subscription_status !== "active" && (count ?? 0) >= 1) {

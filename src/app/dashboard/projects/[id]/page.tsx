@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { STAGES } from "@/lib/stages";
 import { ApprovalNote } from "@/components/ApprovalNote";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -32,6 +33,11 @@ export default async function ProjectDetailPage({
   const { id } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
+  const user = await getAuthenticatedUser();
+
+  if (!user) {
+    notFound();
+  }
 
   const [{ data: project }, { data: tokens }, { data: files }, { data: fileRequests }, { data: activity }] =
     await Promise.all([
@@ -39,6 +45,7 @@ export default async function ProjectDetailPage({
         .from("projects")
         .select("id, project_name, client_name, client_email, stage, notes, approved_by_name, approved_at")
         .eq("id", id)
+        .eq("freelancer_id", user.id)
         .single(),
       supabase
         .from("client_access_tokens")
